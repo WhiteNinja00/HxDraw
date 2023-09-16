@@ -310,7 +310,7 @@ class DrawState extends FlxState {
 		var image:FlxSprite = new FlxSprite(Math.round(coolx), Math.round(cooly));
 		image.pixels = pixels;
 		drawingimage.stamp(image);
-		bitmapdata1 = image.pixels;
+		bitmapdata1 = drawingimage.pixels;
 	}
 
 	function powerthing(numlol:Float, power:Int) {
