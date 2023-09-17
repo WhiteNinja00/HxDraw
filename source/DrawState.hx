@@ -8,10 +8,7 @@ import openfl.display.BitmapData;
 import flixel.FlxSprite;
 import flixel.FlxCamera;
 import flixel.math.FlxPoint;
-import flixel.addons.display.shapes.FlxShapeCircle;
-import flixel.addons.display.shapes.FlxShapeBox;
 import flixel.group.FlxGroup.FlxTypedGroup;
-import flixel.addons.ui.FlxUIInputText;
 import flixel.addons.ui.FlxUINumericStepper;
 import flixel.util.FlxCollision;
 import openfl.utils.ByteArray;
@@ -20,6 +17,7 @@ import openfl.display.PNGEncoderOptions;
 import flash.net.FileReference;
 import flixel.FlxObject;
 import flixel.util.FlxColor;
+import flixel.util.FlxSpriteUtil;
 
 class DrawState extends FlxState {
 	//bitmapdata
@@ -39,8 +37,8 @@ class DrawState extends FlxState {
 	var camfollow:FlxObject;
 
 	//drawing stuff
-	var size = 1.0;
-	var curcolor = 0xFF444444;
+	var size = 6.0;
+	var curcolor = 0xFF000000;
 	var start:FlxPoint;
 	var released = false;
 	var justreleased = false;
@@ -53,15 +51,19 @@ class DrawState extends FlxState {
 	var undostuff = 4;
 	var redostuff = 0;
 	var drawingimage:FlxSprite;
+	var drawingsquare:FlxSprite;
+	var drawingcircle:FlxSprite;
 
 	//buttons
-	var buttons:FlxTypedGroup<FlxSprite>;
+	//var buttons:FlxTypedGroup<FlxSprite>;
 	var otherbuttons:FlxTypedGroup<FlxSprite>;
 	var thingmakingmemad = ['brush', 'bucket', 'square', 'circle'];
 	var curoption = 0;
 
 	//text fields and stuff
-	var coolcolor:FlxUIInputText;
+	var coolred:FlxUINumericStepper;
+	var coolgreen:FlxUINumericStepper;
+	var coolblue:FlxUINumericStepper;
 	var coolsize:FlxUINumericStepper;
 
 	override public function create() {
@@ -88,27 +90,38 @@ class DrawState extends FlxState {
 		//drawingimage.cameras = [cam];
 		add(drawingimage);
 
+		drawingsquare = new FlxSprite();
+		add(drawingsquare);
+
+		drawingcircle = new FlxSprite();
+		add(drawingcircle);
+
 		//make bg
 		var background:FlxSprite = new FlxSprite().loadGraphic(Paths.returnimage('background'));
 		add(background);
 
+		/*
 		buttons = new FlxTypedGroup<FlxSprite>();
 		add(buttons);
+		*/
 
 		otherbuttons = new FlxTypedGroup<FlxSprite>();
 		add(otherbuttons);
 
 		//make buttons
+		/*
 		for(i in 0...4) {
 			var button:FlxSprite = new FlxSprite(4, 45 + (i * 67)).loadGraphic(Paths.returnimage(thingmakingmemad[i]));
 			button.ID = i;
 			buttons.add(button);
 		}
+		*/
 
 		var newbutton:FlxSprite = new FlxSprite(69, 1).loadGraphic(Paths.returnimage('new'));
 		newbutton.ID = 0;
 		otherbuttons.add(newbutton);
 
+		/*
 		var newbutton:FlxSprite = new FlxSprite(195, 3).loadGraphic(Paths.returnimage('save'));
 		newbutton.ID = 1;
 		otherbuttons.add(newbutton);
@@ -120,11 +133,18 @@ class DrawState extends FlxState {
 		var redobutton:FlxSprite = new FlxSprite(377, 4).loadGraphic(Paths.returnimage('redo'));
 		redobutton.ID = 3;
 		otherbuttons.add(redobutton);
+		*/
 
-		coolcolor = new FlxUIInputText(565, 16, 142, '444444');
-		add(coolcolor);
+		coolred = new FlxUINumericStepper(565, 16, 1, 0, 0, 255, 3);
+		add(coolred);
 
-		coolsize = new FlxUINumericStepper(1142, 16, 0.5, 1, 0, 999, 3);
+		coolgreen = new FlxUINumericStepper(coolred.x + coolred.width + 5, 16, 1, 0, 0, 255, 3);
+		add(coolgreen);
+
+		coolblue = new FlxUINumericStepper(coolgreen.x + coolgreen.width + 5, 16, 1, 0, 0, 255, 3);
+		add(coolblue);
+
+		coolsize = new FlxUINumericStepper(1142, 16, 0.5, 6, 0, 999, 3);
 		add(coolsize);
 
 		super.create();
@@ -132,9 +152,12 @@ class DrawState extends FlxState {
 
 	override public function update(elapsed:Float) {
 		size = coolsize.value;
-		var valthing = coolcolor.name;
-		curcolor = FlxColor.fromString('#' + valthing);
+		if(0 >= size) {
+			size = 0.5;
+		}
+		curcolor = FlxColor.fromRGBFloat(coolred.value / 255, coolgreen.value / 255, coolblue.value / 255, 1);
 
+		/*
 		var speed = 5;
 		if(FlxG.keys.pressed.W || FlxG.keys.pressed.UP) {
 			drawingimage.y += speed;
@@ -152,28 +175,26 @@ class DrawState extends FlxState {
 		if(FlxG.mouse.wheel != 0) {
 			cam.zoom += FlxG.mouse.wheel / 10;
 		}
+		*/
 
 		mouseobject.x = FlxG.mouse.x;
 		mouseobject.y = FlxG.mouse.y;
 
 		oldmousepos = mousepos;
-		mousepos = FlxG.mouse.getScreenPosition();
+		mousepos = FlxG.mouse.getWorldPosition();
 
 		if(FlxG.mouse.justPressed) {
 			start = mousepos;
 			released = false;
 			justreleased = false;
-			if(FlxG.mouse.x >= 70 && FlxG.mouse.x <= 1275 && FlxG.mouse.y >= 45 && FlxG.mouse.y <= 715) {
-				if(FlxCollision.pixelPerfectCheck(mouseobject, drawingimage, 1)) {
-					drawing = true;
-				} else {
-					drawing = false;
-				}
+			if(FlxG.mouse.x >= 70 && FlxG.mouse.x <= 1275 && FlxG.mouse.y >= 45 && FlxG.mouse.y <= 715 && FlxCollision.pixelPerfectCheck(mouseobject, drawingimage, 1)) {
+				drawing = true;
 			} else {
 				drawing = false;
 			}
 		}
 
+		/*
 		buttons.forEach(function(button:FlxSprite) {
 			button.color = 0xFFBFBFBF;
 			if(FlxCollision.pixelPerfectCheck(mouseobject, button, 1)) {
@@ -183,7 +204,8 @@ class DrawState extends FlxState {
 				}
 			}
 		});
-
+		*/
+		
 		otherbuttons.forEach(function(button:FlxSprite) {
 			button.color = 0xFFBFBFBF;
 			if(FlxCollision.pixelPerfectCheck(mouseobject, button, 1)) {
@@ -191,8 +213,12 @@ class DrawState extends FlxState {
 				if(FlxG.mouse.justPressed) {
 					switch(button.ID) {
 						case 0:
+							FlxSpriteUtil.fill(drawingimage, 0xFFFFFFFF);
+							bitmapdata1 = drawingimage.pixels;
+							/*
 							var tempState:PopUp = new PopUp();
 							openSubState(tempState);
+							*/
 						case 1:
 							var byteArray:ByteArray = new ByteArray();
 							bitmapdata1.encode(bitmapdata1.rect, new PNGEncoderOptions(false), byteArray);
@@ -238,28 +264,23 @@ class DrawState extends FlxState {
 				justreleased = true;
 				undostuff = 4;
 				redostuff = 0;
+				/*
 				bitmapdata5 = bitmapdata4;
 				bitmapdata4 = bitmapdata3;
 				bitmapdata3 = bitmapdata2;
 				bitmapdata2 = bitmapdata1;
+				*/
 			}
 		}
 
 		if(drawing) {
 			switch(curoption) {
 				case 0:
-					var repeat = Math.round(Math.sqrt(powerthing(mousepos.x - oldmousepos.x, 2) + powerthing(mousepos.y - oldmousepos.y, 2)));
-					for(i in 0...repeat) {
-						var rad = size / 2;
-						var coolx = ((mousepos.x / repeat) * (repeat - i)) - ((oldmousepos.x / repeat) * i);
-						var cooly = start.y;
-						if(rad < 0) {
-							rad = -rad;
-							coolx -= rad;
-							cooly -= rad;
-						}
-						var circle = new FlxShapeCircle(coolx, start.y, rad, {}, curcolor);
-						stampthing(circle.pixels, coolx, cooly);
+					var image = new FlxSprite();
+					FlxSpriteUtil.drawLine(drawingimage, mousepos.x - 70, mousepos.y - 45, oldmousepos.x - 70, oldmousepos.y - 45, {thickness: size * 2, color: curcolor});
+					bitmapdata1 = drawingimage.pixels;
+					if(justreleased) {
+						drawing = false;
 					}
 				case 1:
 	
@@ -276,25 +297,37 @@ class DrawState extends FlxState {
 						height = -height;
 						cooly -= height * 2;
 					}
-					var square = new FlxShapeBox(coolx, cooly, width, height, {thickness: size, color: curcolor}, 0x00000000);
 					if(justreleased) {
 						justreleased = false;
+						drawing = false;
+						FlxSpriteUtil.drawRect(drawingimage, coolx, cooly, width, height, curcolor, {thickness: size, color: curcolor});
+					} else {
+						var image = new FlxSprite();
+						FlxSpriteUtil.drawRect(image, coolx, cooly, width, height, curcolor, {thickness: size, color: curcolor});
+						drawingsquare = image;
 					}
-					stampthing(square.pixels, coolx, cooly);
 				case 3:
-					var rad = (mousepos.x - start.x) / 2;
+					var width = mousepos.x - start.x;
 					var coolx = start.x;
-					var cooly = start.y;
-					if(rad < 0) {
-						rad = -rad;
-						coolx -= rad * 2;
-						cooly -= rad * 2;
+					if(width < 0) {
+						width = -width;
+						coolx -= width;
 					}
-					var circle = new FlxShapeCircle(coolx, cooly, rad, {thickness: size, color: curcolor}, 0x00000000);
+					var height = mousepos.y - start.y;
+					var cooly = start.y;
+					if(height < 0) {
+						height = -height;
+						cooly -= height * 2;
+					}
 					if(justreleased) {
 						justreleased = false;
+						drawing = false;
+						FlxSpriteUtil.drawEllipse(drawingimage, coolx, cooly, width, height, curcolor, {thickness: size, color: curcolor});
+					} else {
+						var image = new FlxSprite();
+						FlxSpriteUtil.drawEllipse(image, coolx, cooly, width, height, curcolor, {thickness: size, color: curcolor});
+						drawingcircle = image;
 					}
-					stampthing(circle.pixels, coolx, cooly);
 			}
 		}
 
@@ -306,9 +339,9 @@ class DrawState extends FlxState {
 		super.update(elapsed);
 	}
 
-	function stampthing(pixels:BitmapData, coolx, cooly) {
+	function stampthing(coolpixels:BitmapData, coolx, cooly) {
 		var image:FlxSprite = new FlxSprite(Math.round(coolx), Math.round(cooly));
-		image.pixels = pixels;
+		image.pixels = coolpixels;
 		drawingimage.stamp(image);
 		bitmapdata1 = drawingimage.pixels;
 	}
@@ -325,7 +358,7 @@ class DrawState extends FlxState {
 		if(image) {
 			bitmapdata1 = imagething;
 		} else {
-			var image = new FlxSprite().makeGraphic(width, height, 0xFFCCCCC);
+			var image = new FlxSprite().makeGraphic(width, height, 0xFFFFFFFF);
 			bitmapdata1 = image.pixels;
 		}
 		bitmapdata2 = bitmapdata1;
