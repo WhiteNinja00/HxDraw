@@ -18,15 +18,9 @@ import flash.net.FileReference;
 import flixel.FlxObject;
 import flixel.util.FlxColor;
 import flixel.util.FlxSpriteUtil;
+import openfl.geom.Point;
 
 class DrawState extends FlxState {
-	//bitmapdata
-	var bitmapdata1:BitmapData;
-	var bitmapdata2:BitmapData;
-	var bitmapdata3:BitmapData;
-	var bitmapdata4:BitmapData;
-	var bitmapdata5:BitmapData;
-
 	//mouse stuff
 	var mouseobject:FlxSprite;
 	var mousepos:FlxPoint;
@@ -45,12 +39,12 @@ class DrawState extends FlxState {
 	var drawing = false;
 	public static var width = 1200;
 	public static var height = 665;
-	public static var image = false;
+	public static var imagebool = false;
 	public static var imagething:BitmapData;
 	public static var redrawimage = false;
-	var undostuff = 4;
-	var redostuff = 0;
+	var undostuff = false;
 	var drawingimage:FlxSprite;
+	var drawingimageold:FlxSprite;
 	var drawingsquare:FlxSprite;
 	var drawingcircle:FlxSprite;
 
@@ -74,19 +68,19 @@ class DrawState extends FlxState {
 		mouseobject = new FlxSprite().makeGraphic(1, 1, 0xFFFFFFFF);
 		add(mouseobject);
 
-		//load image
-		loadimage();
-
 		//make camera
-		cam = new FlxCamera(0, 0, FlxG.width, FlxG.height, 1.0);
+		cam = new FlxCamera(70, 45, width, height, 1.0);
 		//FlxG.cameras.add(cam);
 		camfollow = new FlxObject(0, 0, 1, 1);
 		add(camfollow);
 		//FlxG.camera.follow(camfollow, LOCKON, 1);
 
-		//make the image
-		drawingimage = new FlxSprite(70, 45);
-		drawingimage.pixels = bitmapdata1;
+		//make the images
+
+		drawingimageold = new FlxSprite(70, 45).makeGraphic(width, height, 0xFFFFFFFF);
+		add(drawingimageold);
+
+		drawingimage = new FlxSprite(70, 45).makeGraphic(width, height, 0xFFFFFFFF);
 		//drawingimage.cameras = [cam];
 		add(drawingimage);
 
@@ -126,14 +120,14 @@ class DrawState extends FlxState {
 		newbutton.ID = 1;
 		otherbuttons.add(newbutton);
 
-		var undobutton:FlxSprite = new FlxSprite(326, 5).loadGraphic(Paths.returnimage('undo'));
-		undobutton.ID = 2;
-		otherbuttons.add(undobutton);
-
 		var redobutton:FlxSprite = new FlxSprite(377, 4).loadGraphic(Paths.returnimage('redo'));
 		redobutton.ID = 3;
 		otherbuttons.add(redobutton);
 		*/
+
+		var undobutton:FlxSprite = new FlxSprite(326, 5).loadGraphic(Paths.returnimage('undo'));
+		undobutton.ID = 1;
+		otherbuttons.add(undobutton);
 
 		coolred = new FlxUINumericStepper(565, 16, 1, 0, 0, 255, 3);
 		add(coolred);
@@ -189,6 +183,10 @@ class DrawState extends FlxState {
 			justreleased = false;
 			if(FlxG.mouse.x >= 70 && FlxG.mouse.x <= 1275 && FlxG.mouse.y >= 45 && FlxG.mouse.y <= 715 && FlxCollision.pixelPerfectCheck(mouseobject, drawingimage, 1)) {
 				drawing = true;
+				var thing = drawingimage.pixels;
+				FlxSpriteUtil.fill(drawingimageold, 0xFFFFFFFF);
+				drawingimageold.pixels.copyPixels(thing, thing.rect, new Point(0, 0), null, null, true);
+				undostuff = true;
 			} else {
 				drawing = false;
 			}
@@ -214,46 +212,31 @@ class DrawState extends FlxState {
 					switch(button.ID) {
 						case 0:
 							FlxSpriteUtil.fill(drawingimage, 0xFFFFFFFF);
-							bitmapdata1 = drawingimage.pixels;
+							FlxSpriteUtil.fill(drawingimageold, 0xFFFFFFFF);
+							undostuff = false;
 							/*
 							var tempState:PopUp = new PopUp();
 							openSubState(tempState);
 							*/
 						case 1:
+							if(undostuff) {
+								var thing = drawingimageold.pixels;
+								FlxSpriteUtil.fill(drawingimage, 0xFFFFFFFF);
+								drawingimage.pixels.copyPixels(thing, thing.rect, new Point(0, 0), null, null, true);
+								undostuff = false;
+							}
+						case 2:
 							var byteArray:ByteArray = new ByteArray();
-							bitmapdata1.encode(bitmapdata1.rect, new PNGEncoderOptions(false), byteArray);
+							//bitmapdata1.encode(bitmapdata1.rect, new PNGEncoderOptions(false), byteArray);
 							byteArray.compress();
 							byteArray.uncompress();
 							var savefile = new FileReference();
 							savefile.save(Bytes.ofData(byteArray), "untitled.png");
-						case 2:
-							undostuff -= 1;
-							if(undostuff < 0) {
-								undostuff = 0;
-							} else {
-								redostuff += 1;
-								var bufferbitmap:BitmapData = bitmapdata1;
-								bitmapdata1 = bitmapdata2;
-								bitmapdata2 = bitmapdata3;
-								bitmapdata3 = bitmapdata4;
-								bitmapdata4 = bitmapdata5;
-								bitmapdata5 = bufferbitmap;
-							}
-						case 3:
-							redostuff -= 1;
-							if(redostuff < 0) {
-								redostuff = 0;
-							} else {
-								undostuff += 1;
-								var bufferbitmap:BitmapData = bitmapdata5;
-								bitmapdata5 = bitmapdata4;
-								bitmapdata4 = bitmapdata3;
-								bitmapdata3 = bitmapdata2;
-								bitmapdata2 = bitmapdata1;
-								bitmapdata1 = bufferbitmap;
-							}
 					}
 				}
+			}
+			if(button.ID == 1) {
+				button.visible = undostuff;
 			}
 		});
 	
@@ -262,14 +245,6 @@ class DrawState extends FlxState {
 			drawing = false;
 			if(drawing) {
 				justreleased = true;
-				undostuff = 4;
-				redostuff = 0;
-				/*
-				bitmapdata5 = bitmapdata4;
-				bitmapdata4 = bitmapdata3;
-				bitmapdata3 = bitmapdata2;
-				bitmapdata2 = bitmapdata1;
-				*/
 			}
 		}
 
@@ -278,7 +253,6 @@ class DrawState extends FlxState {
 				case 0:
 					var image = new FlxSprite();
 					FlxSpriteUtil.drawLine(drawingimage, mousepos.x - 70, mousepos.y - 45, oldmousepos.x - 70, oldmousepos.y - 45, {thickness: size * 2, color: curcolor});
-					bitmapdata1 = drawingimage.pixels;
 					if(justreleased) {
 						drawing = false;
 					}
@@ -331,11 +305,6 @@ class DrawState extends FlxState {
 			}
 		}
 
-		if(redrawimage) {
-			loadimage();
-		}
-		drawingimage.pixels = bitmapdata1;
-
 		super.update(elapsed);
 	}
 
@@ -343,7 +312,6 @@ class DrawState extends FlxState {
 		var image:FlxSprite = new FlxSprite(Math.round(coolx), Math.round(cooly));
 		image.pixels = coolpixels;
 		drawingimage.stamp(image);
-		bitmapdata1 = drawingimage.pixels;
 	}
 
 	function powerthing(numlol:Float, power:Int) {
@@ -352,19 +320,5 @@ class DrawState extends FlxState {
 			finalthing *= numlol;
 		}
 		return finalthing;
-	}
-
-	function loadimage() {
-		if(image) {
-			bitmapdata1 = imagething;
-		} else {
-			var image = new FlxSprite().makeGraphic(width, height, 0xFFFFFFFF);
-			bitmapdata1 = image.pixels;
-		}
-		bitmapdata2 = bitmapdata1;
-		bitmapdata3 = bitmapdata1;
-		bitmapdata4 = bitmapdata1;
-		bitmapdata5 = bitmapdata1;
-		redrawimage = false;
 	}
 }
